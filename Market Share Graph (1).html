@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPI Duopoly — Market Structure</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Libre+Franklin:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:      #201e1d;
+    --surface: #2c2928;
+    --border:  #3d3836;
+    --text:    #e8e4dc;
+    --muted:   #7a756e;
+    --gold:    #e8c87a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Libre Franklin', Helvetica, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 52px 24px 64px;
+  }
+
+  .page { width: 100%; max-width: 900px; }
+
+  .eyebrow {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(26px, 5.5vw, 48px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1.05;
+    margin-bottom: 14px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .lede {
+    font-size: 13px;
+    color: #b0aba3;
+    line-height: 1.7;
+    max-width: 600px;
+    margin-bottom: 36px;
+    border-left: 2px solid var(--border);
+    padding-left: 14px;
+  }
+
+  .chart-shell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0 16px 0 4px;
+  }
+
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 400px;
+  }
+
+  @media (max-width: 600px) {
+    .chart-wrap { height: 280px; }
+  }
+
+  .fy-strip {
+    display: flex;
+    border-top: 1px solid var(--border);
+  }
+
+  .fy-label {
+    flex: 1;
+    text-align: center;
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 0 9px;
+  }
+
+  .fy-label + .fy-label { border-left: 1px solid var(--border); }
+
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    padding: 18px 0 4px;
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s;
+  }
+
+  .legend-item.faded { opacity: 0.28; }
+
+  .legend-line {
+    width: 20px;
+    height: 2.5px;
+    border-radius: 2px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .legend-line::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: inherit;
+  }
+
+  .legend-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .footnote {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #7a756e;
+    line-height: 1.75;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="chart-shell">
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+    <div class="fy-strip">
+      <div class="fy-label">FY 2016-17</div>
+      <div class="fy-label">FY 2017-18</div>
+      <div class="fy-label">FY 2018-19</div>
+      <div class="fy-label">FY 2019-20</div>
+      <div class="fy-label">FY 2020-21</div>
+    </div>
+  </div>
+
+  <div class="legend-row" id="legend"></div>
+
+  <div class="eyebrow" style="margin-top:20px;">UPI Market Structure · FY 2016-17 to FY 2020-21</div>
+
+  <div class="footnote">
+    Players are ranked 1–5 by transaction volume share within each quarter: Player 1 holds the highest share, Player 5 the lowest among the top 5. Rankings may not represent the same apps across all periods. The dashed line marks the 30% individual-share threshold. Shaded region marks the period of stable duopoly (FY 2019-20 onwards). Tap a player in the legend to show or hide their line.<br><br>
+    Source: NPCI/UPI/SOP-01/2020-21, dated March 25, 2021.
+  </div>
+
+</div>
+
+<script>
+const labels = [
+  'Q1','Q2','Q3','Q4',
+  'Q1','Q2','Q3','Q4',
+  'Q1','Q2','Q3','Q4',
+  'Q1','Q2','Q3','Q4',
+  'Q1','Q2','Q3','Q4',
+];
+
+const fyNames = [
+  'FY 2016-17','FY 2016-17','FY 2016-17','FY 2016-17',
+  'FY 2017-18','FY 2017-18','FY 2017-18','FY 2017-18',
+  'FY 2018-19','FY 2018-19','FY 2018-19','FY 2018-19',
+  'FY 2019-20','FY 2019-20','FY 2019-20','FY 2019-20',
+  'FY 2020-21','FY 2020-21','FY 2020-21','FY 2020-21',
+];
+
+// Phase IV starts at index 12 (Q1 FY 2019-20)
+const DUOPOLY_FROM = 12;
+
+const players = [
+  { label: 'Player 1', color: '#5f259f', width: 2.5, dash: [],
+    data: [10.76,32.63,45.26,43.82, 46.92,61.06,35.86,35.11, 33.31,29.78,37.55,38.17, 33.14,36.39,41.02,40.53, 44.25,42.32,42.84,41.01] },
+  { label: 'Player 2', color: '#4285F4', width: 2.5, dash: [],
+    data: [9.67,17.04,16.89,14.82, 35.48,34.38,17.73,17.73, 30.04,29.62,20.38,28.81, 28.81,36.17,35.73,37.57, 36.95,37.50,40.08,40.06] },
+  { label: 'Player 3', color: '#a0a0a0', width: 1.5, dash: [4,3],
+    data: [9.10,16.34,11.25,11.25, 5.34,20.04,16.27,15.28, 19.78,20.07,20.35,21.46, 27.23,17.23,17.59,16.35, 11.37,11.26,11.76,11.76] },
+  { label: 'Player 4', color: '#FFC000', width: 1.5, dash: [4,3],
+    data: [9.00,8.22,7.25,7.25, 3.20,4.91,10.42,6.34, 6.95,5.01,11.46,1.96, 2.06,1.97,15.87,15.40, 10.98,10.92,11.12,11.38] },
+  { label: 'Player 5', color: '#5B9BD5', width: 1.5, dash: [4,3],
+    data: [8.50,5.21,5.83,5.83, 1.73,3.30,1.22,1.63, 2.50,1.56,8.26,0.85, 1.65,1.87,1.38,1.40, 8.71,5.17,1.91,1.91] },
+];
+
+// ── Plugin: duopoly shade + 30% line + FY separators ─────────────────────────
+const overlays = {
+  id: 'overlays',
+  beforeDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales.x;
+    const step = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
+
+    // Duopoly shade (Phase IV: index 12 → end)
+    const x1 = xScale.getPixelForValue(DUOPOLY_FROM) - step * 0.5;
+    const x2 = chartArea.right;
+    ctx.save();
+    ctx.fillStyle = 'rgba(95,37,159,0.10)';
+    ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+    // Left edge accent
+    ctx.fillStyle = 'rgba(95,37,159,0.5)';
+    ctx.fillRect(x1, chartArea.top, 1.5, chartArea.bottom - chartArea.top);
+    ctx.restore();
+
+    // 30% reference line
+    const y30 = scales.y.getPixelForValue(30);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, y30);
+    ctx.lineTo(chartArea.right, y30);
+    ctx.strokeStyle = 'rgba(232,200,122,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(232,200,122,0.6)';
+    ctx.font = "500 8.5px 'Libre Franklin', Helvetica, sans-serif";
+    ctx.textAlign = 'left';
+    ctx.fillText('30% threshold', chartArea.left + 4, y30 - 5);
+    ctx.restore();
+  },
+
+  afterDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales.x;
+    const step = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
+
+    // FY separator lines
+    [3, 7, 11, 15].forEach(idx => {
+      const x = xScale.getPixelForValue(idx) + step * 0.5;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    // "Duopoly" label inside shaded region
+    const x1 = xScale.getPixelForValue(DUOPOLY_FROM) - step * 0.5;
+    const midX = (x1 + chartArea.right) / 2;
+    ctx.save();
+    ctx.fillStyle = 'rgba(95,37,159,0.75)';
+    ctx.font = "600 8.5px 'Libre Franklin', Helvetica, sans-serif";
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '0.10em';
+    ctx.fillText('Duopoly Stabilised', midX, chartArea.top + 14);
+    ctx.restore();
+  }
+};
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+const ctx = document.getElementById('chart').getContext('2d');
+
+const chart = new Chart(ctx, {
+  type: 'line',
+  plugins: [overlays],
+  data: {
+    labels,
+    datasets: players.map(p => ({
+      label: p.label,
+      data: p.data,
+      borderColor: p.color,
+      backgroundColor: 'transparent',
+      fill: false,
+      pointBackgroundColor: p.color,
+      pointBorderColor: p.color,
+      pointRadius: p.width > 2 ? 3 : 2,
+      pointHoverRadius: 6,
+      pointHoverBorderWidth: 2,
+      pointHoverBorderColor: '#e8e4dc',
+      borderWidth: p.width,
+      borderDash: p.dash,
+      tension: 0.3,
+    })),
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 1000, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 24 } },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { color: '#3d3836' },
+        ticks: {
+          color: '#7a756e',
+          font: { family: "'Libre Franklin', Helvetica, sans-serif", size: 9 },
+          maxRotation: 0,
+        },
+      },
+      y: {
+        min: 0, max: 70,
+        grid: { color: '#3d3836' },
+        border: { display: false },
+        ticks: {
+          color: '#7a756e',
+          font: { family: "'Libre Franklin', Helvetica, sans-serif", size: 9 },
+          callback: v => v + '%',
+          stepSize: 10,
+        },
+      },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1a1816',
+        titleColor: '#e8e4dc',
+        bodyColor: '#b0aba3',
+        borderColor: '#3d3836',
+        borderWidth: 1,
+        padding: 14,
+        titleFont: { family: "'Playfair Display', Georgia, serif", size: 13, weight: '700' },
+        bodyFont: { family: "'Libre Franklin', Helvetica, sans-serif", size: 11 },
+        callbacks: {
+          title(items) {
+            const idx = items[0].dataIndex;
+            const tag = idx >= DUOPOLY_FROM ? '  · Duopoly' : '';
+            return `${fyNames[idx]} — ${labels[idx]}${tag}`;
+          },
+          label(item) {
+            return `  ${item.dataset.label}   ${item.parsed.y.toFixed(2)}%`;
+          },
+          labelColor(item) {
+            return {
+              borderColor: item.dataset.borderColor,
+              backgroundColor: item.dataset.borderColor,
+              borderRadius: 2,
+            };
+          },
+        },
+      },
+    },
+  },
+});
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+const legendEl = document.getElementById('legend');
+players.forEach((p, i) => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  const isKey = i < 2;
+  item.innerHTML = `
+    <div class="legend-line" style="background:${p.color}; height:${isKey ? 3 : 2}px"></div>
+    <span class="legend-name" style="${isKey ? '' : 'color:#9a9590; font-weight:400'}">${p.label}</span>
+  `;
+  item.addEventListener('click', () => {
+    const meta = chart.getDatasetMeta(i);
+    meta.hidden = !meta.hidden;
+    item.classList.toggle('faded', meta.hidden);
+    chart.update();
+  });
+  legendEl.appendChild(item);
+});
+</script>
+</body>
+</html>
