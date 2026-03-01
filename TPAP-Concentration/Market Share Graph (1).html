@@ -73,22 +73,6 @@ hhiToggle.addEventListener('click', () => {
     padding-left: 14px;
   }
 
-  /* Hint bar */
-  .hint-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 20px;
-    margin-bottom: 16px;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .hint-bar span { display: flex; align-items: center; gap: 5px; }
-  .hint-icon { font-size: 11px; }
-
   /* Chart */
   .chart-shell {
     background: var(--surface);
@@ -266,12 +250,6 @@ hhiToggle.addEventListener('click', () => {
   <h1>From competition<br>to <em>duopoly</em></h1>
   <p class="lede">Among the top 5 UPI apps by transaction volume, the early quarters showed players in close contest. Within four years, a stable two-player structure emerged — one from which the market has not meaningfully deviated since.</p>
 
-  <div class="hint-bar">
-    <span><span class="hint-icon">↔</span> Hover to explore values</span>
-    <span><span class="hint-icon">◎</span> Click a player to isolate</span>
-    <span><span class="hint-icon">↗</span> Red line = market concentration (HHI)</span>
-  </div>
-
   <div class="chart-shell">
     <div class="chart-wrap">
       <canvas id="chart"></canvas>
@@ -291,10 +269,8 @@ hhiToggle.addEventListener('click', () => {
 
   <button class="hhi-toggle" id="hhiToggle"><span class="dot"></span>Show HHI</button>
 
-  <div class="caption">UPI Market Structure · FY 2016-17 to FY 2020-21</div>
-
   <div class="footnote">
-    Players are ranked 1–5 by transaction volume share within each quarter. Player 1 = highest share, Player 5 = lowest among the top 5. Rankings may not represent the same apps across all periods. The 30% dashed line marks the individual share threshold. Shaded region = stable duopoly (FY 2019-20 onwards). HHI (Herfindahl-Hirschman Index) measures market concentration — scores above 2,500 indicate high concentration.<br><br>
+    Players are ranked 1–5 by transaction volume share within each quarter. Player 1 = highest share, Player 5 = lowest among the top 5. Rankings may not represent the same apps across all periods. <br><br>HHI (Herfindahl-Hirschman Index) measures market concentration — scores above 2,500 indicate high concentration.<br><br>
     Source: NPCI/UPI/SOP-01/2020-21, dated March 25, 2021.
   </div>
 
