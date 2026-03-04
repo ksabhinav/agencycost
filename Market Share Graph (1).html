@@ -4,7 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UPI Duopoly — Market Structure</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
+// ── HHI Toggle ────────────────────────────────────────────────────────────────
+const hhiToggle = document.getElementById('hhiToggle');
+hhiToggle.addEventListener('click', () => {
+  const hhiMeta = chart.getDatasetMeta(players.length);
+  const isHidden = hhiMeta.hidden;
+  hhiMeta.hidden = !isHidden;
+  hhiToggle.classList.toggle('active', isHidden);
+  hhiToggle.innerHTML = isHidden
+    ? '<span class="dot"></span>Hide HHI'
+    : '<span class="dot"></span>Show HHI';
+  chart.update();
+});
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Libre+Franklin:wght@300;400;500;600&display=swap');
 
@@ -13,8 +26,9 @@
     --surface: #2c2928;
     --border:  #3d3836;
     --text:    #e8e4dc;
-    --muted:   #7a756e;
+    --muted:   #ffffff;
     --gold:    #e8c87a;
+    --hhi:     #e06060;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,10 +40,11 @@
     min-height: 100vh;
     display: flex;
     justify-content: center;
-    padding: 52px 24px 64px;
+    padding: 28px 0px 36px;
   }
 
-  .page { width: 100%; max-width: 900px; }
+  .page { width: 100%; max-width: 100%; padding: 0 24px; }
+
 
   .eyebrow {
     font-size: 10px;
@@ -37,9 +52,7 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 12px;
   }
-
   h1 {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: clamp(26px, 5.5vw, 48px);
@@ -49,36 +62,34 @@
     line-height: 1.05;
     margin-bottom: 14px;
   }
-
-  h1 em {
-    font-style: italic;
-    color: var(--gold);
-  }
-
+  h1 em { font-style: italic; color: var(--gold); }
   .lede {
     font-size: 13px;
-    color: #b0aba3;
+    color: #ffffff;
     line-height: 1.7;
     max-width: 600px;
-    margin-bottom: 36px;
+    margin-bottom: 28px;
     border-left: 2px solid var(--border);
     padding-left: 14px;
   }
 
+  /* Chart */
   .chart-shell {
     background: var(--surface);
     border: 1px solid var(--border);
     padding: 0 16px 0 4px;
+    position: relative;
   }
 
   .chart-wrap {
     position: relative;
     width: 100%;
-    height: 400px;
+    height: 520px;
+    cursor: crosshair;
   }
 
   @media (max-width: 600px) {
-    .chart-wrap { height: 280px; }
+    .chart-wrap { height: 380px; }
   }
 
   .fy-strip {
@@ -93,19 +104,21 @@
     font-weight: 500;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: #ffffff;
     padding: 6px 0 9px;
   }
 
   .fy-label + .fy-label { border-left: 1px solid var(--border); }
 
+  /* Legend */
   .legend-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 22px;
-    padding: 18px 0 4px;
+    gap: 8px 20px;
+    padding: 16px 0 4px;
     border-top: 1px solid var(--border);
     margin-top: 2px;
+    align-items: center;
   }
 
   .legend-item {
@@ -115,24 +128,27 @@
     cursor: pointer;
     user-select: none;
     transition: opacity 0.2s;
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid transparent;
   }
 
-  .legend-item.faded { opacity: 0.28; }
+  .legend-item:hover { border-color: var(--border); }
+  .legend-item.isolated { border-color: var(--border); background: rgba(255,255,255,0.04); }
+  .legend-item.dimmed { opacity: 0.25; }
 
   .legend-line {
-    width: 20px;
-    height: 2.5px;
+    width: 18px; height: 2.5px;
     border-radius: 2px;
-    position: relative;
-    flex-shrink: 0;
+    position: relative; flex-shrink: 0;
   }
 
   .legend-line::after {
     content: '';
     position: absolute;
     top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 7px; height: 7px;
+    transform: translate(-50%,-50%);
+    width: 6px; height: 6px;
     border-radius: 50%;
     background: inherit;
   }
@@ -143,10 +159,86 @@
     color: var(--text);
   }
 
+  .legend-hhi {
+    display: flex; align-items: center; gap: 7px;
+    margin-left: auto;
+    font-size: 10.5px;
+    color: #ffffff;
+    font-weight: 500;
+  }
+
+  .hhi-swatch {
+    width: 18px; height: 2px;
+    background: var(--hhi);
+    border-radius: 2px;
+    opacity: 0.7;
+    position: relative;
+  }
+
+  /* HHI badge in tooltip */
+  .hhi-badge {
+    display: inline-block;
+    background: rgba(224,96,96,0.15);
+    color: var(--hhi);
+    border: 1px solid rgba(224,96,96,0.3);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+
+  /* HHI Toggle */
+  .hhi-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: transparent;
+    color: #ffffff;
+    font-family: 'Libre Franklin', Helvetica, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+    margin-bottom: 2px;
+  }
+  .hhi-toggle:hover { border-color: var(--hhi); color: var(--text); }
+  .hhi-toggle.active {
+    border-color: var(--hhi);
+    background: rgba(224,96,96,0.08);
+    color: var(--hhi);
+  }
+  .hhi-toggle .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--hhi);
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .hhi-toggle.active .dot { opacity: 1; }
+
+  /* Caption */
+  .caption {
+    margin-top: 20px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Footnote */
   .footnote {
     margin-top: 4px;
     font-size: 11px;
-    color: #7a756e;
+    color: #ffffff;
     line-height: 1.75;
   }
 </style>
@@ -154,6 +246,13 @@
 <body>
 <div class="page">
 
+  <div class="eyebrow" style="margin-bottom:10px;">UPI Market Structure · FY 2016–17 to FY 2020–21</div>
+  <h1>From competition<br>to <em>duopoly</em></h1>
+  <p class="lede">Among the top 5 UPI apps by transaction volume, the early quarters showed players in close contest. Within four years, a stable two-player structure emerged — one from which the market has not meaningfully deviated since.</p>
+
+  <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+    <button class="hhi-toggle" id="hhiToggle"><span class="dot"></span>Show HHI</button>
+  </div>
   <div class="chart-shell">
     <div class="chart-wrap">
       <canvas id="chart"></canvas>
@@ -167,26 +266,19 @@
     </div>
   </div>
 
-  <div class="legend-row" id="legend"></div>
+  <div class="legend-row" id="legend">
 
-  <div class="eyebrow" style="margin-top:20px;">UPI Market Structure · FY 2016-17 to FY 2020-21</div>
+  </div>
 
   <div class="footnote">
-    Players are ranked 1–5 by transaction volume share within each quarter: Player 1 holds the highest share, Player 5 the lowest among the top 5. Rankings may not represent the same apps across all periods. The dashed line marks the 30% individual-share threshold. Shaded region marks the period of stable duopoly (FY 2019-20 onwards). Tap a player in the legend to show or hide their line.<br><br>
+    Players are ranked 1–5 by transaction volume share within each quarter. Player 1 = highest share, Player 5 = lowest among the top 5. Rankings may not represent the same apps across all periods. <br><br>HHI (Herfindahl-Hirschman Index) measures market concentration — scores above 2,500 indicate high concentration.<br><br>
     Source: NPCI/UPI/SOP-01/2020-21, dated March 25, 2021.
   </div>
 
 </div>
 
 <script>
-const labels = [
-  'Q1','Q2','Q3','Q4',
-  'Q1','Q2','Q3','Q4',
-  'Q1','Q2','Q3','Q4',
-  'Q1','Q2','Q3','Q4',
-  'Q1','Q2','Q3','Q4',
-];
-
+const labels = ['Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4','Q1','Q2','Q3','Q4'];
 const fyNames = [
   'FY 2016-17','FY 2016-17','FY 2016-17','FY 2016-17',
   'FY 2017-18','FY 2017-18','FY 2017-18','FY 2017-18',
@@ -195,56 +287,79 @@ const fyNames = [
   'FY 2020-21','FY 2020-21','FY 2020-21','FY 2020-21',
 ];
 
-// Phase IV starts at index 12 (Q1 FY 2019-20)
 const DUOPOLY_FROM = 12;
+const HHI_THRESHOLD = 2500;
 
 const players = [
   { label: 'Player 1', color: '#5f259f', width: 2.5, dash: [],
-    data: [10.76,32.63,45.26,43.82, 46.92,61.06,35.86,35.11, 33.31,29.78,37.55,38.17, 33.14,36.39,41.02,40.53, 44.25,42.32,42.84,41.01] },
+    data: [10.76,32.63,45.26,43.82,46.92,61.06,35.86,35.11,33.31,29.78,37.55,38.17,33.14,36.39,41.02,40.53,44.25,42.32,42.84,41.01] },
   { label: 'Player 2', color: '#4285F4', width: 2.5, dash: [],
-    data: [9.67,17.04,16.89,14.82, 35.48,34.38,17.73,17.73, 30.04,29.62,20.38,28.81, 28.81,36.17,35.73,37.57, 36.95,37.50,40.08,40.06] },
+    data: [9.67,17.04,16.89,14.82,35.48,34.38,17.73,17.73,30.04,29.62,20.38,28.81,28.81,36.17,35.73,37.57,36.95,37.50,40.08,40.06] },
   { label: 'Player 3', color: '#a0a0a0', width: 1.5, dash: [4,3],
-    data: [9.10,16.34,11.25,11.25, 5.34,20.04,16.27,15.28, 19.78,20.07,20.35,21.46, 27.23,17.23,17.59,16.35, 11.37,11.26,11.76,11.76] },
+    data: [9.10,16.34,11.25,11.25,5.34,20.04,16.27,15.28,19.78,20.07,20.35,21.46,27.23,17.23,17.59,16.35,11.37,11.26,11.76,11.76] },
   { label: 'Player 4', color: '#FFC000', width: 1.5, dash: [4,3],
-    data: [9.00,8.22,7.25,7.25, 3.20,4.91,10.42,6.34, 6.95,5.01,11.46,1.96, 2.06,1.97,15.87,15.40, 10.98,10.92,11.12,11.38] },
+    data: [9.00,8.22,7.25,7.25,3.20,4.91,10.42,6.34,6.95,5.01,11.46,1.96,2.06,1.97,15.87,15.40,10.98,10.92,11.12,11.38] },
   { label: 'Player 5', color: '#5B9BD5', width: 1.5, dash: [4,3],
-    data: [8.50,5.21,5.83,5.83, 1.73,3.30,1.22,1.63, 2.50,1.56,8.26,0.85, 1.65,1.87,1.38,1.40, 8.71,5.17,1.91,1.91] },
+    data: [8.50,5.21,5.83,5.83,1.73,3.30,1.22,1.63,2.50,1.56,8.26,0.85,1.65,1.87,1.38,1.40,8.71,5.17,1.91,1.91] },
 ];
 
-// ── Plugin: duopoly shade + 30% line + FY separators ─────────────────────────
+const hhiData = [445,1717,2547,2353,3502,5347,1975,1823,2458,2195,2439,2752,2677,2937,3522,3561,3649,3470,3707,3558];
+
+// State
+let isolatedIndex = null;
+
+// ── Plugins ──────────────────────────────────────────────────────────────────
+
+// 1. Background overlays (duopoly shade, 30% line, FY separators)
 const overlays = {
   id: 'overlays',
   beforeDraw(chart) {
     const { ctx, chartArea, scales } = chart;
     const xScale = scales.x;
+    const yScale = scales.y;
     const step = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
 
-    // Duopoly shade (Phase IV: index 12 → end)
+    // Duopoly shade
     const x1 = xScale.getPixelForValue(DUOPOLY_FROM) - step * 0.5;
-    const x2 = chartArea.right;
     ctx.save();
     ctx.fillStyle = 'rgba(95,37,159,0.10)';
-    ctx.fillRect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
-    // Left edge accent
-    ctx.fillStyle = 'rgba(95,37,159,0.5)';
+    ctx.fillRect(x1, chartArea.top, chartArea.right - x1, chartArea.bottom - chartArea.top);
+    ctx.fillStyle = 'rgba(95,37,159,0.45)';
     ctx.fillRect(x1, chartArea.top, 1.5, chartArea.bottom - chartArea.top);
     ctx.restore();
 
-    // 30% reference line
-    const y30 = scales.y.getPixelForValue(30);
+    // 30% dashed line
+    const y30 = yScale.getPixelForValue(30);
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(chartArea.left, y30);
     ctx.lineTo(chartArea.right, y30);
-    ctx.strokeStyle = 'rgba(232,200,122,0.4)';
+    ctx.strokeStyle = 'rgba(232,200,122,0.38)';
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(232,200,122,0.6)';
-    ctx.font = "500 8.5px 'Libre Franklin', Helvetica, sans-serif";
+    ctx.fillStyle = 'rgba(232,200,122,0.9)';
+    ctx.font = "500 8px 'Libre Franklin', Helvetica, sans-serif";
     ctx.textAlign = 'left';
     ctx.fillText('30% threshold', chartArea.left + 4, y30 - 5);
+    ctx.restore();
+
+    // HHI 2500 threshold line on right axis
+    const yHHI = scales.yHHI.getPixelForValue(HHI_THRESHOLD);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(chartArea.left, yHHI);
+    ctx.lineTo(chartArea.right, yHHI);
+    ctx.strokeStyle = 'rgba(224,96,96,0.25)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(224,96,96,0.9)';
+    ctx.font = "500 8px 'Libre Franklin', Helvetica, sans-serif";
+    ctx.textAlign = 'right';
+    ctx.fillText('HHI 2,500', chartArea.right - 4, yHHI - 5);
     ctx.restore();
   },
 
@@ -253,103 +368,201 @@ const overlays = {
     const xScale = scales.x;
     const step = xScale.getPixelForValue(1) - xScale.getPixelForValue(0);
 
-    // FY separator lines
+    // FY separators
     [3, 7, 11, 15].forEach(idx => {
       const x = xScale.getPixelForValue(idx) + step * 0.5;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(x, chartArea.top);
       ctx.lineTo(x, chartArea.bottom);
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.restore();
     });
 
-    // "Duopoly" label inside shaded region
+    // "Duopoly Stabilised" label
     const x1 = xScale.getPixelForValue(DUOPOLY_FROM) - step * 0.5;
     const midX = (x1 + chartArea.right) / 2;
     ctx.save();
-    ctx.fillStyle = 'rgba(95,37,159,0.75)';
+    ctx.fillStyle = 'rgba(180,140,230,0.9)';
     ctx.font = "600 8.5px 'Libre Franklin', Helvetica, sans-serif";
     ctx.textAlign = 'center';
-    ctx.letterSpacing = '0.10em';
     ctx.fillText('Duopoly Stabilised', midX, chartArea.top + 14);
     ctx.restore();
   }
 };
 
-// ── Chart ─────────────────────────────────────────────────────────────────────
+// 2. Crosshair
+const crosshair = {
+  id: 'crosshair',
+  afterDraw(chart) {
+    if (chart._crosshairX === undefined) return;
+    const { ctx, chartArea } = chart;
+    const x = chart._crosshairX;
+    if (x < chartArea.left || x > chartArea.right) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.strokeStyle = 'rgba(232,228,220,0.2)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+// 3. End-of-line labels (right edge, last visible data point)
+const endLabels = {
+  id: 'endLabels',
+  afterDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const n = chart.data.labels.length;
+
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      if (ds.yAxisID === 'yHHI') return; // skip HHI
+
+      const lastPoint = meta.data[n - 1];
+      if (!lastPoint) return;
+
+      const { x, y } = lastPoint.getProps(['x', 'y'], true);
+      const val = ds.data[n - 1];
+
+      ctx.save();
+      ctx.fillStyle = ds.borderColor;
+      ctx.globalAlpha = isolatedIndex === null ? 0.9 : (isolatedIndex === i ? 1 : 0.15);
+      ctx.font = `600 9px 'Libre Franklin', Helvetica, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${val}%`, x + 6, y);
+      ctx.restore();
+    });
+  }
+};
+
+// ── Chart init ────────────────────────────────────────────────────────────────
 const ctx = document.getElementById('chart').getContext('2d');
+
+const datasets = [
+  ...players.map(p => ({
+    label: p.label,
+    data: p.data,
+    borderColor: p.color,
+    backgroundColor: 'transparent',
+    fill: false,
+    yAxisID: 'y',
+    pointBackgroundColor: p.color,
+    pointBorderColor: p.color,
+    pointRadius: p.width > 2 ? 3 : 2,
+    pointHoverRadius: 6,
+    pointHoverBorderWidth: 2,
+    pointHoverBorderColor: '#e8e4dc',
+    borderWidth: p.width,
+    borderDash: p.dash,
+    tension: 0.3,
+  })),
+  {
+    label: 'HHI',
+    data: hhiData,
+    borderColor: '#e06060',
+    backgroundColor: 'rgba(224,96,96,0.06)',
+    fill: false,
+    yAxisID: 'yHHI',
+    pointBackgroundColor: '#e06060',
+    pointBorderColor: '#e06060',
+    pointRadius: 2,
+    pointHoverRadius: 5,
+    borderWidth: 1.5,
+    borderDash: [],
+    tension: 0.3,
+    opacity: 0.7,
+  }
+];
 
 const chart = new Chart(ctx, {
   type: 'line',
-  plugins: [overlays],
-  data: {
-    labels,
-    datasets: players.map(p => ({
-      label: p.label,
-      data: p.data,
-      borderColor: p.color,
-      backgroundColor: 'transparent',
-      fill: false,
-      pointBackgroundColor: p.color,
-      pointBorderColor: p.color,
-      pointRadius: p.width > 2 ? 3 : 2,
-      pointHoverRadius: 6,
-      pointHoverBorderWidth: 2,
-      pointHoverBorderColor: '#e8e4dc',
-      borderWidth: p.width,
-      borderDash: p.dash,
-      tension: 0.3,
-    })),
-  },
+  plugins: [overlays, crosshair, endLabels],
+  data: { labels, datasets },
   options: {
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 1000, easing: 'easeOutQuart' },
     interaction: { mode: 'index', intersect: false },
-    layout: { padding: { top: 24 } },
+    layout: { padding: { top: 24, right: 48 } }, // right padding for end labels
     scales: {
       x: {
         grid: { display: false },
         border: { color: '#3d3836' },
         ticks: {
-          color: '#7a756e',
+          color: '#ffffff',
           font: { family: "'Libre Franklin', Helvetica, sans-serif", size: 9 },
           maxRotation: 0,
         },
       },
       y: {
         min: 0, max: 70,
+        position: 'left',
         grid: { color: '#3d3836' },
         border: { display: false },
         ticks: {
-          color: '#7a756e',
+          color: '#ffffff',
           font: { family: "'Libre Franklin', Helvetica, sans-serif", size: 9 },
           callback: v => v + '%',
           stepSize: 10,
         },
       },
+      yHHI: {
+        min: 0, max: 6000,
+        position: 'right',
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          color: 'rgba(224,96,96,0.6)',
+          font: { family: "'Libre Franklin', Helvetica, sans-serif", size: 8.5 },
+          callback: v => v.toLocaleString(),
+          stepSize: 1000,
+          maxTicksLimit: 7,
+        },
+      },
+    },
+    onHover(event, elements, chart) {
+      if (event.x !== undefined) {
+        chart._crosshairX = event.x;
+        chart.draw();
+      }
     },
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1a1816',
+        backgroundColor: '#131211',
         titleColor: '#e8e4dc',
-        bodyColor: '#b0aba3',
+        bodyColor: '#ffffff',
         borderColor: '#3d3836',
         borderWidth: 1,
         padding: 14,
         titleFont: { family: "'Playfair Display', Georgia, serif", size: 13, weight: '700' },
         bodyFont: { family: "'Libre Franklin', Helvetica, sans-serif", size: 11 },
+        itemSort: (a, b) => {
+          // HHI last
+          if (a.dataset.label === 'HHI') return 1;
+          if (b.dataset.label === 'HHI') return -1;
+          return 0;
+        },
         callbacks: {
           title(items) {
             const idx = items[0].dataIndex;
-            const tag = idx >= DUOPOLY_FROM ? '  · Duopoly' : '';
-            return `${fyNames[idx]} — ${labels[idx]}${tag}`;
+            const duopoly = idx >= DUOPOLY_FROM ? '  · Duopoly' : '';
+            return `${fyNames[idx]} — ${labels[idx]}${duopoly}`;
           },
           label(item) {
+            if (item.dataset.label === 'HHI') {
+              const v = item.parsed.y;
+              const conc = v >= 2500 ? 'Highly concentrated' : v >= 1500 ? 'Moderately concentrated' : 'Fragmented';
+              return `  HHI   ${v.toLocaleString()}  ·  ${conc}`;
+            }
             return `  ${item.dataset.label}   ${item.parsed.y.toFixed(2)}%`;
           },
           labelColor(item) {
@@ -365,23 +578,67 @@ const chart = new Chart(ctx, {
   },
 });
 
-// ── Legend ────────────────────────────────────────────────────────────────────
+// Hide HHI by default
+chart.getDatasetMeta(players.length).hidden = true;
+chart.options.scales.yHHI.display = false;
+chart.update();
+
+// ── Legend + click-to-isolate ─────────────────────────────────────────────────
 const legendEl = document.getElementById('legend');
+
 players.forEach((p, i) => {
   const item = document.createElement('div');
   item.className = 'legend-item';
   const isKey = i < 2;
   item.innerHTML = `
     <div class="legend-line" style="background:${p.color}; height:${isKey ? 3 : 2}px"></div>
-    <span class="legend-name" style="${isKey ? '' : 'color:#9a9590; font-weight:400'}">${p.label}</span>
+    <span class="legend-name" style="${isKey ? '' : 'color:#ffffff; font-weight:400'}">${p.label}</span>
   `;
+
   item.addEventListener('click', () => {
-    const meta = chart.getDatasetMeta(i);
-    meta.hidden = !meta.hidden;
-    item.classList.toggle('faded', meta.hidden);
+    if (isolatedIndex === i) {
+      // Restore all
+      isolatedIndex = null;
+      chart.data.datasets.forEach((ds, di) => {
+        const meta = chart.getDatasetMeta(di);
+        meta.hidden = false;
+        meta._hidden = false;
+      });
+      document.querySelectorAll('.legend-item').forEach(el => {
+        el.classList.remove('isolated', 'dimmed');
+      });
+    } else {
+      // Isolate this one
+      isolatedIndex = i;
+      chart.data.datasets.forEach((ds, di) => {
+        const meta = chart.getDatasetMeta(di);
+        // Always keep HHI visible (last dataset)
+        if (di === players.length) return;
+        meta.hidden = di !== i;
+      });
+      document.querySelectorAll('.legend-item').forEach((el, li) => {
+        el.classList.toggle('isolated', li === i);
+        el.classList.toggle('dimmed', li !== i);
+      });
+    }
     chart.update();
   });
-  legendEl.appendChild(item);
+
+  // Insert before the HHI label on the right
+  legendEl.insertBefore(item, legendEl.querySelector('.legend-hhi'));
+});
+
+// ── HHI Toggle ────────────────────────────────────────────────────────────────
+const hhiToggle = document.getElementById('hhiToggle');
+hhiToggle.addEventListener('click', () => {
+  const hhiMeta = chart.getDatasetMeta(players.length);
+  const isHidden = hhiMeta.hidden;
+  hhiMeta.hidden = !isHidden;
+  hhiToggle.classList.toggle('active', isHidden);
+  hhiToggle.innerHTML = isHidden
+    ? '<span class="dot"></span>Hide HHI'
+    : '<span class="dot"></span>Show HHI';
+  chart.update();
 });
 </script>
 </body>
