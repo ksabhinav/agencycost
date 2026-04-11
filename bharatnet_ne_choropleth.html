@@ -612,7 +612,7 @@ async function init() {
             }
         }).addTo(map);
 
-        map.fitBounds(geoLayer.getBounds(), { padding: [10, 10], maxZoom: 7.5 });
+        map.fitBounds(geoLayer.getBounds(), { padding: [20, 20], maxZoom: 6.5 });
         buildSummary();
         updateNote();
     } catch(e) {
